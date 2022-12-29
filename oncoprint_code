@@ -1,0 +1,372 @@
+##install.packages("openxlsx", dependencies = TRUE)
+library(openxlsx)
+
+#set up working directory to access local excel file
+getwd()
+setwd("/Users/mac/Desktop")
+
+#read the file 
+meta.data = read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "meta-data")
+length(meta.data$Tumor_Sample_Barcode)
+
+#reads the Mutation+fusion sheet from the file
+mut=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "Mutations+fusion")
+##View(mut)
+class(mut) #data.frame
+mut$Hugo_Symbol
+length(unique(mut$Tumor_Sample_Barcode))
+
+#MDM2 is missing for mutations but exist in CNVs
+genelist <- c("TERT","FGFR2","FGFR3", "FGFR1", "IDH1", "IDH2","KRAS", "NRAS",
+              "BRAF","PIK3CA","PTEN","ERBB2", "EGFR", "CCND1","CCND3", "CCNE1",
+              "MDM2", "MSH2","BRCA1","BRCA2","PALB2","ATM","EPHA2","SMAD4",
+              "PBRM1","BAP1","ARID1A","CDKN2A","TP53")
+genelist %in% mut$Hugo_Symbol
+table(genelist %in% mut$Hugo_Symbol)
+genelist[genelist %in% mut$Hugo_Symbol]
+genelist[!genelist %in% mut$Hugo_Symbol]
+
+## mut.sub is within the mutation sheet, the genes we are looking for
+mut.sub <- mut[mut$Hugo_Symbol %in% genelist,]
+dim(mut.sub)
+View(mut.sub)
+
+sort(mut.sub$Tumor_Sample_Barcode)
+length(mut.sub$Tumor_Sample_Barcode)
+length(unique(mut.sub$Tumor_Sample_Barcode))
+length(unique(genelist))
+dim(mut.sub)
+
+
+#reads CNVs sheet from file
+cnv=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "CNVs")
+View(cnv)
+class(cnv) #data.frame
+cnv$Gene
+
+genelist %in% cnv$Gene
+table(genelist %in% cnv$Gene)
+genelist[genelist %in% cnv$Gene]
+genelist[!genelist %in% cnv$Gene]
+
+
+#cnv.sub is the list of genes that we will be inserting the CNV information
+cnv.sub <- cnv[cnv$Gene %in% genelist,]
+dim(cnv.sub)
+View(cnv.sub)
+## patient names whose genes contain our interested cnv
+cnv.sub$Tumor_Sample_Barcode
+
+sort(cnv.sub$Tumor_Sample_Barcode)
+length(cnv.sub$Tumor_Sample_Barcode)
+length(unique(cnv.sub$Tumor_Sample_Barcode))
+dim(cnv.sub)
+
+length(unique(mut$Tumor_Sample_Barcode))
+length(unique(cnv$Tumor_Sample_Barcode))
+length(unique(mut.sub$Tumor_Sample_Barcode))
+length(unique(cnv.sub$Tumor_Sample_Barcode))
+length(intersect(unique(mut.sub$Tumor_Sample_Barcode), unique(cnv.sub$Tumor_Sample_Barcode)))
+length(union(unique(mut.sub$Tumor_Sample_Barcode), unique(cnv.sub$Tumor_Sample_Barcode)))
+sample_id=(union(unique(mut$Tumor_Sample_Barcode), unique(cnv$Tumor_Sample_Barcode)))
+sample_id=sample_id[!sample_id %in% "Tumor_Sample_Barcode"]
+sample_id
+length(sample_id)
+unique(mut.sub$Tumor_Sample_Barcode)
+unique(cnv.sub$Tumor_Sample_Barcode)
+
+tmb=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "TMB")
+dim(unique(tmb))
+length(unique(tmb$Sample_Id))
+union(sample_id, unique(tmb$Sample_Id))
+sample_id2=(union(unique(sample_id), unique(tmb$Sample_Id)))
+sample_id2=sample_id[!sample_id %in% "Tumor_Sample_Barcode"]
+length(sample_id2)
+
+tmbsample = tmb$Sample_Id
+length(tmbsample)
+
+
+length(tmb$`Mutation_Rate.(Mutations/.Mb)`)
+
+
+
+tmbsample
+colnames(df)
+colnames(df) == tmbsample
+
+
+table(tmb$Sample_Id %in% colnames(df))
+
+
+
+#data frame for mutation burden
+tmb2 <- tmb[match(colnames(df), tmb$Sample_Id),]
+View(tmb2)
+dim(tmb2)
+tmb$Sample_Id
+
+
+mutdf <- data.frame(matrix(ncol = length(tmbsample), nrow = 1))
+row.names(mutdf) <- "TMB"
+colnames(mutdf) <- sort(tmbsample)
+mutdf[is.na(mutdf)] <- ""
+View(mutdf)
+log(tmb$`Mutation_Rate.(Mutations/.Mb)`)
+for(i in 1:nrow(tmb)){
+    mutdf["TMB",tmb$Sample_Id[i]] <- paste0(tmb$`Mutation_Rate.(Mutations/.Mb)`[i])
+}
+
+
+
+
+
+
+
+# data.table, matrix, data.frame
+df <- data.frame(matrix(ncol = length(unique(genelist)), nrow = length(sample_id2)))
+row.names(df) <- sort(unique(sample_id2))
+colnames(df) <- sort(unique(genelist))
+df[is.na(df)] <- ""
+View(df)
+mut.sub$Variant_Classification[is.na(mut.sub$Variant_Classification)]= "No_Mut_Info"
+##View(t(df))
+df [1:4,1:4]
+##mut.sub[is.na(mut.sub$Variant_Classification),]
+#write.csv(mut.sub[is.na(mut.sub$Variant_Classification),],"Need to fill.csv")
+#View(mut.sub[is.na(mut.sub$Variant_Classification),])
+
+
+
+
+
+mut.sub2 <- mut.sub[order(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification),]
+View(mut.sub2)
+##mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),] 
+
+
+#View(mut.sub2[duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
+#View(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification))
+#dim(mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
+#View(mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
+
+View(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")])
+dim(mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
+View(mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
+View(mut.sub2[duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
+
+
+mut.sub2 <- mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),]
+
+dim(mut.sub2)
+dim(mut.sub)
+
+mut.sub = mut.sub2
+
+for(i in 1:nrow(mut.sub)){
+  ##df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]] <- paste0(mut.sub$Variant_Classification[i],";")
+  df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]] <- paste0(df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]], mut.sub$Variant_Classification[i], ";")
+}
+table(unlist(df))
+table(is.na(mut.sub$Variant_Classification))
+cnv.sub$CNV
+table(cnv.sub$CNV)
+
+
+
+cnv.sub.2 <- cnv.sub[order(cnv.sub$Gene, cnv.sub$Tumor_Sample_Barcode),]
+View(cnv.sub.2)
+cnv.sub.2[duplicated(cnv.sub.2),]
+cnv.sub.2 <- cnv.sub.2[!duplicated(cnv.sub.2),]
+dim(cnv.sub.2)
+dim(cnv.sub)
+
+cnv.sub =cnv.sub.2
+
+
+
+for(i in 1:nrow(cnv.sub)){
+   ##df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]] <- paste0(cnv.sub$CNV[i],";")
+   df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]] <- paste0(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]], cnv.sub$CNV[i], ";")
+}
+table(unlist(df))
+for(i in 1:nrow(cnv.sub)){
+  print(paste0("-------", i, "---------"))
+  print(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]])
+  df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Genel[i]] <- paste0(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]], cnv.sub$CNV[i], ";")
+  print(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]])
+}
+
+table(t(df))
+
+#head(cnv.sub)
+#paste0("a","b","c",";")
+View(t(df))
+
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ComplexHeatmap")
+
+
+df
+df <- t(df)
+View(df)
+df[df == "Missense_Mutation;Nonsense_Mutation;"] <- "Missense_Mutation;"
+df[df == "Upstream Gene;"] <- "Upstream_Gene;"
+df[df == "Frame_Shift_Ins;Missense_Mutation;"] <- "Multiple"
+df[df == "Missense_Mutation;Splice_Site;"] <- "Multiple"
+df[df == "Frame_Shift_Del;Frame_Shift_Ins;"] <- "Multiple"
+df[df == "Frame_Shift_Del;Splice_Site;"] <- "Multiple"
+
+
+
+library(ComplexHeatmap)
+col = c(Missense_Mutation = "#1c86ed", Frame_Shift_Ins = "#820397", Fusion = "#fd8002", In_Frame_Del = "#fc7c75", Upstream_Gene = "#d8b708", Multiple = "#231709", Loh = "green",
+        Del = "blue", Amp = "red", Loss = "yellow", Nonsense_Mutation = "#bc80bc", Frame_Shift_Del = "#8ed2c7", Splice_Site = "#6a790f", In_Frame_Ins = "#80b1d2", No_Mut_Info = "#757e89", background = "#c0c0c0")
+
+library(circlize)
+
+
+df2 <- as.data.frame(t(df))
+df2$tmb <- tmb$`Mutation_Rate.(Mutations/.Mb)`[match(row.names(df2), tmb$Sample_Id)]
+df2$sex <- meta.data$Sex[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$race <- meta.data$Race[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$site <- meta.data$Site[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$type <- meta.data$Site[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$age <- meta.data$Age_at_Diagnosis[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$tumor <- meta.data$Tumor_content[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$trans <- meta.data$Transcriptome[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$chemo <- meta.data$pre_post_chemo[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+df2$spec <- meta.data$Specimen_primary_or_metastatic[match(row.names(df2), meta.data$Tumor_Sample_Barcode)]
+
+
+zscore <- scale(as.numeric(df2$tmb))
+log <- log10(as.numeric(df2$tmb))
+original <- (as.numeric(df2$tmb))
+
+age <- (as.numeric(df2$age))
+age.na <- as.numeric(age)[!is.na(as.numeric(age))]
+tumor <- (as.numeric(df2$tumor))
+tumor.na <- as.numeric(tumor)[!is.na(as.numeric(tumor))]
+zscore.na <- as.numeric(zscore)[!is.na(as.numeric(zscore))]
+log.na <- as.numeric(log)[!is.na(as.numeric(log))]
+original.na <- as.numeric(original)[!is.na(as.numeric(original))]
+
+col_zscore = colorRamp2(c(min(zscore.na),0,max(zscore.na)), c("blue", "white", "red"))
+col_log_mean= colorRamp2(c(min(log.na),mean(log.na),max(log.na)), c("blue", "white", "red"))
+col_log_med = colorRamp2(c(min(log.na),median(log.na),max(log.na)), c("blue", "white", "red"))
+col_log_ori = colorRamp2(c(min(original.na),mean(log.na),max(original.na)), c("yellow", "purple", "black"))
+col_age= colorRamp2(c(min(age.na),mean(age.na),max(age.na)), c("blue", "white", "red"))
+col_tumor= colorRamp2(c(min(tumor.na),mean(tumor.na),max(tumor.na)), c("blue", "white", "red"))
+
+ha = HeatmapAnnotation(zscore = as.numeric(zscore),
+                       ##log_mean = as.numeric(log),
+                       ##log_med = as.numeric(log),
+                       original = as.numeric(original),
+                       Age_At_Diagnosis = as.numeric(age),
+                       Sex = df2$sex,
+                       Race = df2$race,
+                       Site = df2$site,
+                       Type_Of_BTC = df2$type,
+                       Tumor_Content = df2$tumor,
+                       Transcriptome = df2$trans,
+                       Pre_Or_Post_Chemo = df2$chemo,
+                       Specimen_Primary_Or_Metastatic = df2$spec,
+                       col = list(zscore = col_zscore,
+                                  ##log_mean = col_log_mean,
+                                  ##log_med = col_log_med,
+                                  age = col_age,
+                                  tumor = col_tumor,
+                                  original = col_log_ori,
+                                  Sex = c("M" = "blue", "F" = "red")),
+                       na_col = "darkgrey",
+                       Race = c("C" = "blue","A" = "red", "B" = "yellow","AS" = "orange", "AI" = "purple"),
+                       Site = c("Liver" = "red","Subcutaneous_tissue" = "green","Lymph_node"= "blue", "Peritoneum" = "yellow", "Brain" = "orange", "Lung" = "pink"),
+                       Type_Of_BTC = c("iCCA" = "red", "GB" = "blue", "dCCA" = "yellow", "Mixed" = "purple", "pCCA" = "orangle"),
+                       Transcriptome = c("capture" = "red", "polyA" = "green"),
+                       Pre_Or_Post_Chemo = c("Pre" = "red", "Post" = "green"),
+                       Specimen_Primary_Or_Metastatic = c("Primary" = "red", "Metastatic" = "green"))
+
+
+column_title = "Landscape of genomic aberrations in biliary tract cancer cancers"
+alter_fun = list(
+  background = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                              gp = gpar(fill = col["background"], col = NA)),
+  Frame_Shift_Ins = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                   gp = gpar(fill = col["Frame_Shift_Ins"], col = NA)),
+  Fusion = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                          gp = gpar(fill = col["Fusion"], col = NA)),
+  In_Frame_Del = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                gp = gpar(fill = col["In_Frame_Del"], col = NA)),
+  Upstream_Gene = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                 gp = gpar(fill = col["Upstream_Gene"], col = NA)),
+  Multiple = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                            gp = gpar(fill = col["Multiple"], col = NA)),
+  Nonsense_Mutation = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                     gp = gpar(fill = col["Nonsense_Mutation"], col = NA)),
+  Frame_Shift_Del = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                   gp = gpar(fill = col["Frame_Shift_Del"], col = NA)),
+  Splice_Site = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                               gp = gpar(fill = col["Splice_Site"], col = NA)),
+  In_Frame_Ins = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                gp = gpar(fill = col["In_Frame_Ins"], col = NA)),
+  No_Mut_Info = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                               gp = gpar(fill = col["No_Mut_Info"], col = NA)),
+  Missense_Mutation = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9, 
+                                                     gp = gpar(fill = col["Missense_Mutation"], col = NA)),
+  Loh = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.4, 
+                                       gp = gpar(fill = col["Loh"], col = NA)),
+  Del = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.4, 
+                                       gp = gpar(fill = col["Del"], col = NA)),
+  Amp = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.4, 
+                                       gp = gpar(fill = col["Amp"], col = NA)),
+  Loss = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.4, 
+                                        gp = gpar(fill = col["Loss"], col = NA))
+)
+row_order = c("FGFR2","FGFR3", "FGFR1", "IDH1", "IDH2","KRAS", "NRAS",
+              "BRAF","PIK3CA","PTEN","ERBB2", "EGFR", "CCND1","CCND3", "CCNE1",
+              "MDM2", "MSH2","BRCA1","BRCA2","PALB2","ATM", "TERT","EPHA2","SMAD4",
+              "PBRM1","BAP1","ARID1A","CDKN2A","TP53")
+
+
+##with annotations
+draw(oncoPrint(df,
+          alter_fun = alter_fun, col = col, column_title = column_title, 
+          column_title_gp = gpar(fontsize = 20, fontface = "bold"), show_column_names = T, column_names_gp = gpar(fontsize=5), 
+          row_order = row_order,bottom_annotation = ha))
+
+##without annotations
+draw(oncoPrint(df,
+               alter_fun = alter_fun, col = col, column_title = column_title, 
+               column_title_gp = gpar(fontsize = 20, fontface = "bold"), show_column_names = T, column_names_gp = gpar(fontsize=5), 
+               row_order = row_order))
+
+pdf(paste0("oncoprintkeningnew.pdf"), width = 18, height = 10, useDingbats = F)
+a<- oncoPrint(df,
+              alter_fun = alter_fun, col = col, column_title = column_title, 
+              column_title_gp = gpar(fontsize = 30, fontface = "bold"), show_column_names = T, column_names_gp = gpar(fontsize=5), 
+              row_order = row_order,bottom_annotation = ha)
+draw(a, annotation_legend_side = "bottom")
+dev.off()
+
+
+
+
+
+
+summary(as.numeric(mutdf[1,]))
+
+a <- as.numeric(mutdf[1,])
+a[a>25] = 10
+summary(a)
+a[a>100] = 3
+summary(as.numeric(a))
+as.numeric(mutdf[1,]) 
+
+summary(log(as.numeric(mutdf[1,])))
+
+as.numeric(mutdf[1,])
+dim(mutdf)
+dim(df)
