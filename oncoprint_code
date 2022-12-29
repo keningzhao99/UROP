@@ -11,179 +11,68 @@ length(meta.data$Tumor_Sample_Barcode)
 
 #reads the Mutation+fusion sheet from the file
 mut=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "Mutations+fusion")
-##View(mut)
-class(mut) #data.frame
 mut$Hugo_Symbol
 length(unique(mut$Tumor_Sample_Barcode))
 
-#MDM2 is missing for mutations but exist in CNVs
+#Specifying the genes we are looking for
 genelist <- c("TERT","FGFR2","FGFR3", "FGFR1", "IDH1", "IDH2","KRAS", "NRAS",
               "BRAF","PIK3CA","PTEN","ERBB2", "EGFR", "CCND1","CCND3", "CCNE1",
               "MDM2", "MSH2","BRCA1","BRCA2","PALB2","ATM","EPHA2","SMAD4",
               "PBRM1","BAP1","ARID1A","CDKN2A","TP53")
-genelist %in% mut$Hugo_Symbol
-table(genelist %in% mut$Hugo_Symbol)
 genelist[genelist %in% mut$Hugo_Symbol]
 genelist[!genelist %in% mut$Hugo_Symbol]
 
-## mut.sub is within the mutation sheet, the genes we are looking for
+#sorting patient names who contain our interested genes
 mut.sub <- mut[mut$Hugo_Symbol %in% genelist,]
-dim(mut.sub)
-View(mut.sub)
-
 sort(mut.sub$Tumor_Sample_Barcode)
 length(mut.sub$Tumor_Sample_Barcode)
 length(unique(mut.sub$Tumor_Sample_Barcode))
-length(unique(genelist))
-dim(mut.sub)
-
 
 #reads CNVs sheet from file
 cnv=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "CNVs")
-View(cnv)
-class(cnv) #data.frame
 cnv$Gene
-
-genelist %in% cnv$Gene
-table(genelist %in% cnv$Gene)
 genelist[genelist %in% cnv$Gene]
 genelist[!genelist %in% cnv$Gene]
 
-
 #cnv.sub is the list of genes that we will be inserting the CNV information
 cnv.sub <- cnv[cnv$Gene %in% genelist,]
-dim(cnv.sub)
-View(cnv.sub)
-## patient names whose genes contain our interested cnv
+
+#patient names whose genes contain our interested cnv
 cnv.sub$Tumor_Sample_Barcode
 
-sort(cnv.sub$Tumor_Sample_Barcode)
-length(cnv.sub$Tumor_Sample_Barcode)
-length(unique(cnv.sub$Tumor_Sample_Barcode))
-dim(cnv.sub)
-
-length(unique(mut$Tumor_Sample_Barcode))
-length(unique(cnv$Tumor_Sample_Barcode))
-length(unique(mut.sub$Tumor_Sample_Barcode))
-length(unique(cnv.sub$Tumor_Sample_Barcode))
-length(intersect(unique(mut.sub$Tumor_Sample_Barcode), unique(cnv.sub$Tumor_Sample_Barcode)))
-length(union(unique(mut.sub$Tumor_Sample_Barcode), unique(cnv.sub$Tumor_Sample_Barcode)))
+#Create a union of patient IDs that contain gene abberations and fusion type we are interested 
 sample_id=(union(unique(mut$Tumor_Sample_Barcode), unique(cnv$Tumor_Sample_Barcode)))
 sample_id=sample_id[!sample_id %in% "Tumor_Sample_Barcode"]
-sample_id
-length(sample_id)
-unique(mut.sub$Tumor_Sample_Barcode)
-unique(cnv.sub$Tumor_Sample_Barcode)
 
+#read the file for mutation burden
 tmb=read.xlsx('CCA_Data for Oncoprint_v1 (1).xlsx', sheet = "TMB")
-dim(unique(tmb))
-length(unique(tmb$Sample_Id))
+
+#Create a union of patient IDs that accounts for the mutation burdens
 union(sample_id, unique(tmb$Sample_Id))
 sample_id2=(union(unique(sample_id), unique(tmb$Sample_Id)))
 sample_id2=sample_id[!sample_id %in% "Tumor_Sample_Barcode"]
-length(sample_id2)
-
-tmbsample = tmb$Sample_Id
-length(tmbsample)
 
 
-length(tmb$`Mutation_Rate.(Mutations/.Mb)`)
-
-
-
-tmbsample
-colnames(df)
-colnames(df) == tmbsample
-
-
-table(tmb$Sample_Id %in% colnames(df))
-
-
-
-#data frame for mutation burden
-tmb2 <- tmb[match(colnames(df), tmb$Sample_Id),]
-View(tmb2)
-dim(tmb2)
-tmb$Sample_Id
-
-
-mutdf <- data.frame(matrix(ncol = length(tmbsample), nrow = 1))
-row.names(mutdf) <- "TMB"
-colnames(mutdf) <- sort(tmbsample)
-mutdf[is.na(mutdf)] <- ""
-View(mutdf)
-log(tmb$`Mutation_Rate.(Mutations/.Mb)`)
-for(i in 1:nrow(tmb)){
-    mutdf["TMB",tmb$Sample_Id[i]] <- paste0(tmb$`Mutation_Rate.(Mutations/.Mb)`[i])
-}
-
-
-
-
-
-
-
-# data.table, matrix, data.frame
+# data frame that has gene aberrations and fusion type
 df <- data.frame(matrix(ncol = length(unique(genelist)), nrow = length(sample_id2)))
 row.names(df) <- sort(unique(sample_id2))
 colnames(df) <- sort(unique(genelist))
 df[is.na(df)] <- ""
-View(df)
 mut.sub$Variant_Classification[is.na(mut.sub$Variant_Classification)]= "No_Mut_Info"
-##View(t(df))
-df [1:4,1:4]
-##mut.sub[is.na(mut.sub$Variant_Classification),]
-#write.csv(mut.sub[is.na(mut.sub$Variant_Classification),],"Need to fill.csv")
-#View(mut.sub[is.na(mut.sub$Variant_Classification),])
-
-
-
-
-
 mut.sub2 <- mut.sub[order(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification),]
-View(mut.sub2)
-##mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),] 
-
-
-#View(mut.sub2[duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
-#View(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification))
-#dim(mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
-#View(mut.sub2[!duplicated(cbind(mut.sub$Tumor_Sample_Barcode, mut.sub$Hugo_Symbol, mut.sub$Variant_Classification)),])
-
-View(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")])
-dim(mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
-View(mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
-View(mut.sub2[duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),])
-
 
 mut.sub2 <- mut.sub2[!duplicated(mut.sub2[,c("Tumor_Sample_Barcode", "Hugo_Symbol", "Variant_Classification")]),]
-
-dim(mut.sub2)
-dim(mut.sub)
-
 mut.sub = mut.sub2
 
 for(i in 1:nrow(mut.sub)){
   ##df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]] <- paste0(mut.sub$Variant_Classification[i],";")
   df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]] <- paste0(df[mut.sub$Tumor_Sample_Barcode[i],mut.sub$Hugo_Symbol[i]], mut.sub$Variant_Classification[i], ";")
 }
-table(unlist(df))
-table(is.na(mut.sub$Variant_Classification))
 cnv.sub$CNV
-table(cnv.sub$CNV)
-
-
-
 cnv.sub.2 <- cnv.sub[order(cnv.sub$Gene, cnv.sub$Tumor_Sample_Barcode),]
-View(cnv.sub.2)
 cnv.sub.2[duplicated(cnv.sub.2),]
 cnv.sub.2 <- cnv.sub.2[!duplicated(cnv.sub.2),]
-dim(cnv.sub.2)
-dim(cnv.sub)
-
 cnv.sub =cnv.sub.2
-
-
 
 for(i in 1:nrow(cnv.sub)){
    ##df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]] <- paste0(cnv.sub$CNV[i],";")
@@ -197,11 +86,28 @@ for(i in 1:nrow(cnv.sub)){
   print(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]])
 }
 
-table(t(df))
 
-#head(cnv.sub)
-#paste0("a","b","c",";")
-View(t(df))
+#data frame for mutation burden
+tmbsample = tmb$Sample_Id
+length(tmbsample)
+length(tmb$`Mutation_Rate.(Mutations/.Mb)`)
+
+tmbsample
+colnames(df)
+colnames(df) == tmbsample
+tmb2 <- tmb[match(colnames(df), tmb$Sample_Id),]
+tmb$Sample_Id
+
+mutdf <- data.frame(matrix(ncol = length(tmbsample), nrow = 1))
+row.names(mutdf) <- "TMB"
+colnames(mutdf) <- sort(tmbsample)
+mutdf[is.na(mutdf)] <- ""
+View(mutdf)
+log(tmb$`Mutation_Rate.(Mutations/.Mb)`)
+for(i in 1:nrow(tmb)){
+    mutdf["TMB",tmb$Sample_Id[i]] <- paste0(tmb$`Mutation_Rate.(Mutations/.Mb)`[i])
+}
+
 
 
 if (!require("BiocManager", quietly = TRUE))
@@ -212,14 +118,13 @@ BiocManager::install("ComplexHeatmap")
 
 df
 df <- t(df)
-View(df)
+
 df[df == "Missense_Mutation;Nonsense_Mutation;"] <- "Missense_Mutation;"
 df[df == "Upstream Gene;"] <- "Upstream_Gene;"
 df[df == "Frame_Shift_Ins;Missense_Mutation;"] <- "Multiple"
 df[df == "Missense_Mutation;Splice_Site;"] <- "Multiple"
 df[df == "Frame_Shift_Del;Frame_Shift_Ins;"] <- "Multiple"
 df[df == "Frame_Shift_Del;Splice_Site;"] <- "Multiple"
-
 
 
 library(ComplexHeatmap)
