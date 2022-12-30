@@ -75,10 +75,9 @@ cnv.sub.2 <- cnv.sub.2[!duplicated(cnv.sub.2),]
 cnv.sub =cnv.sub.2
 
 for(i in 1:nrow(cnv.sub)){
-   ##df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]] <- paste0(cnv.sub$CNV[i],";")
    df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]] <- paste0(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]], cnv.sub$CNV[i], ";")
 }
-table(unlist(df))
+
 for(i in 1:nrow(cnv.sub)){
   print(paste0("-------", i, "---------"))
   print(df[cnv.sub$Tumor_Sample_Barcode[i],cnv.sub$Gene[i]])
